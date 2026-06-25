@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Поддержка Кашалот — дашборд</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  :root{--bg:#f6f7f9;--card:#fff;--line:#e7e8ea;--ink:#1c1d1f;--mut:#6b6f76;--green:#1D9E75;--blue:#185FA5;--coral:#D85A30;--amber:#BA7517;--purple:#534AB7;--red:#A32D2D;--gray:#888780}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;padding:24px}
+  .wrap{max-width:1080px;margin:0 auto}
+  .head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px}
+  .title{font-size:20px;font-weight:500}
+  .bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:20px}
+  .preset{font-size:13px;padding:6px 12px;border:1px solid var(--line);background:var(--card);border-radius:8px;cursor:pointer;color:var(--ink)}
+  .preset.active{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .bar input[type=date]{font-size:13px;padding:5px 8px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink)}
+  .bar .sep{color:var(--mut);font-size:13px}
+  .range-lbl{font-size:12px;color:var(--mut);margin-left:auto}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:20px}
+  .metric{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px}
+  .metric .lbl{font-size:13px;color:var(--mut);margin-bottom:6px}
+  .metric .num{font-size:26px;font-weight:500}
+  .metric .sub{font-size:12px;color:var(--mut);margin-top:2px}
+  .row{display:grid;grid-template-columns:1fr;gap:16px;margin-bottom:16px}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
+  .panel h3{font-size:14px;font-weight:500;margin:0 0 2px}
+  .panel .hint{font-size:12px;color:var(--mut);margin:0 0 14px}
+  .bar-lbl{display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px}
+  .bar-bg{height:7px;background:var(--bg);border-radius:4px;margin-bottom:11px}
+  .bar-fl{height:7px;border-radius:4px}
+  .canvas-wrap{position:relative;width:100%}
+  .devtbl{width:100%;border-collapse:collapse;font-size:13px}
+  .devtbl th{text-align:left;color:var(--mut);font-weight:400;font-size:12px;padding:4px 6px;border-bottom:1px solid var(--line)}
+  .devtbl td{padding:7px 6px;border-bottom:1px solid var(--line)}
+  .devtbl .num{font-weight:500}
+  .devtbl .cnt{text-align:right;color:var(--coral);font-weight:500}
+  .devtbl .mut{color:var(--mut)}
+  .foot{font-size:11px;color:var(--mut);text-align:center;margin-top:18px}
+  .case{border:1px solid var(--line);border-radius:8px;margin-bottom:8px;background:var(--card)}
+  .case>summary{list-style:none;cursor:pointer;padding:10px 12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .case>summary::-webkit-details-marker{display:none}
+  .case[open]>summary{border-bottom:1px solid var(--line)}
+  .ctime{font-size:12px;color:var(--mut);min-width:78px}
+  .cclient{font-weight:500;font-size:13px}
+  .badge{font-size:11px;padding:2px 8px;border-radius:6px;background:var(--bg);color:var(--mut)}
+  .badge.esc{background:#eaf1fb;color:var(--blue)}
+  .badge.neg{background:#fcebeb;color:var(--red)}
+  .csum{flex:1 1 100%;font-size:13px;color:var(--ink);margin-top:2px}
+  .cdlg{padding:10px 12px;font-size:12px;line-height:1.5}
+  .cdlg .dl{margin-bottom:8px;white-space:pre-wrap}
+  .cdlg .r-client{color:var(--blue)} .cdlg .r-bot{color:var(--mut)} .cdlg .r-operator{color:var(--purple)}
+  .cdlg .rt{font-weight:500;text-transform:uppercase;font-size:10px;letter-spacing:.3px}
+  @media(max-width:680px){.two{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <div class="title">Поддержка Кашалот — пульс гибридной системы</div>
+  </div>
+
+  <div class="bar">
+    <button class="preset" data-days="7">7 дней</button>
+    <button class="preset" data-days="30">30 дней</button>
+    <button class="preset" data-days="90">90 дней</button>
+    <button class="preset" data-days="all">Всё время</button>
+    <span class="sep">·</span>
+    <input type="date" id="from"> <span class="sep">—</span> <input type="date" id="to">
+    <span class="range-lbl" id="rangeLbl"></span>
+  </div>
+
+  <div class="cards" id="cards"></div>
+  <div class="row">
+    <div class="panel">
+      <h3>Автономность бота</h3>
+      <p class="hint">Главная метрика — растёт = людей нужно меньше. Столбики — объём обращений</p>
+      <div class="canvas-wrap" style="height:260px"><canvas id="auto"></canvas></div>
+    </div>
+  </div>
+  <div class="two">
+    <div class="panel">
+      <h3>Топ проблемных Кашалотов</h3>
+      <p class="hint">С привязкой к компании и управляющему · за всё время</p>
+      <table class="devtbl" id="devs"></table>
+    </div>
+    <div class="panel">
+      <h3>Топ-темы обращений</h3>
+      <p class="hint">Чему учить бота, чтобы разгрузить людей</p>
+      <div id="themes"></div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="panel">
+      <h3>Нагрузка операторов</h3>
+      <p class="hint">Кто сколько сообщений написал за период</p>
+      <div id="ops"></div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="panel">
+      <h3>Кейсы за период — ручной разбор</h3>
+      <p class="hint" id="caseHint"></p>
+      <div id="caseList"></div>
+    </div>
+  </div>
+  <div class="foot" id="foot"></div>
+</div>
+<script>
+let M = null, CASES = null, DMIN, DMAX, chart;
+const RU_MON = ['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
+const THEME_COLORS = ['var(--blue)','var(--amber)','var(--red)','var(--purple)','var(--green)','var(--gray)','var(--coral)'];
+const OP_COLORS = ['var(--blue)','var(--purple)','var(--green)','var(--coral)'];
+
+function fmtRu(iso){ const [y,m,d]=iso.split('-'); return d+'.'+m; }
+function addDaysIso(iso, n){ const dt=new Date(iso+'T12:00:00'); dt.setDate(dt.getDate()+n);
+  return dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0'); }
+function daysBetween(a,b){ return Math.round((new Date(b)-new Date(a))/86400000)+1; }
+
+function inRange(from,to){ return M.daily.filter(d => d.date>=from && d.date<=to); }
+
+function bucketize(days, from, to){
+  const span = daysBetween(from,to);
+  let mode = span<=45 ? 'day' : (span<=180 ? 'week' : 'month');
+  const buckets = new Map();
+  for(const d of days){
+    let key, label;
+    if(mode==='day'){ key=d.date; label=fmtRu(d.date); }
+    else if(mode==='month'){ const [y,m]=d.date.split('-'); key=y+'-'+m; label=RU_MON[+m-1]; }
+    else { const dt=new Date(d.date+'T00:00:00'); const onejan=new Date(dt.getFullYear(),0,1);
+           const wk=Math.floor((dt-onejan)/86400000/7); key=dt.getFullYear()+'-w'+wk; label=fmtRu(d.date); }
+    if(!buckets.has(key)) buckets.set(key,{label,appeals:0,escalated:0});
+    const b=buckets.get(key); b.appeals+=d.appeals; b.escalated+=d.escalated;
+  }
+  return [...buckets.values()];
+}
+
+function render(from, to){
+  const days = inRange(from,to);
+  const sum = (k)=>days.reduce((a,d)=>a+d[k],0);
+  const appeals=sum('appeals'), esc=sum('escalated'), neg=sum('neg'), ct=sum('client_total');
+  const autonomy = appeals ? Math.round((1-esc/appeals)*100) : 0;
+  const escShare = appeals ? Math.round(esc/appeals*100) : 0;
+  const negShare = ct ? Math.round(neg/ct*100) : 0;
+
+  document.getElementById('rangeLbl').textContent = from+' — '+to+' · '+daysBetween(from,to)+' дн.';
+
+  const cards=[
+    ['Автономность бота', autonomy+'%', 'оператор подключался к '+escShare+'%', 'var(--green)'],
+    ['Обращений', appeals.toLocaleString('ru'), 'за период', 'var(--ink)'],
+    ['Подключений оператора', escShare+'%', esc.toLocaleString('ru')+' обращений', 'var(--ink)'],
+    ['Доля негатива', negShare+'%', 'медиана ответа ~'+M.totals.operator_median_min+' мин', 'var(--red)'],
+  ];
+  document.getElementById('cards').innerHTML = cards.map(([l,n,s,c])=>
+    `<div class="metric"><div class="lbl">${l}</div><div class="num" style="color:${c}">${n}</div><div class="sub">${s}</div></div>`).join('');
+
+  const themes=new Map();
+  for(const d of days) for(const [k,v] of Object.entries(d.themes)) themes.set(k,(themes.get(k)||0)+v);
+  const tArr=[...themes.entries()].sort((a,b)=>b[1]-a[1]).slice(0,6);
+  const maxT=tArr.length?tArr[0][1]:1;
+  document.getElementById('themes').innerHTML = tArr.length ? tArr.map(([n,v],i)=>
+    `<div class="bar-lbl"><span>${n}</span><span style="color:var(--mut)">${v.toLocaleString('ru')}</span></div>
+     <div class="bar-bg"><div class="bar-fl" style="width:${Math.round(v/maxT*100)}%;background:${THEME_COLORS[i%THEME_COLORS.length]}"></div></div>`).join('')
+    : '<div style="color:var(--mut);font-size:13px">Нет данных за период</div>';
+
+  const ops=new Map();
+  for(const d of days) for(const [k,v] of Object.entries(d.ops)) ops.set(k,(ops.get(k)||0)+v);
+  const oArr=[...ops.entries()].sort((a,b)=>b[1]-a[1]);
+  const maxO=oArr.length?oArr[0][1]:1;
+  document.getElementById('ops').innerHTML = oArr.length ? oArr.map(([n,v],i)=>
+    `<div class="bar-lbl"><span>${n}</span><span style="color:var(--mut)">${v.toLocaleString('ru')} сообщ.</span></div>
+     <div class="bar-bg"><div class="bar-fl" style="width:${Math.round(v/maxO*100)}%;background:${OP_COLORS[i%OP_COLORS.length]}"></div></div>`).join('')
+    : '<div style="color:var(--mut);font-size:13px">Нет данных за период</div>';
+
+  const bk=bucketize(days, from, to);
+  const labels=bk.map(b=>b.label);
+  const autoData=bk.map(b=> b.appeals ? Math.round((1-b.escalated/b.appeals)*100) : null);
+  const volData=bk.map(b=>b.appeals);
+  chart.data.labels=labels;
+  chart.data.datasets[0].data=volData;
+  chart.data.datasets[1].data=autoData;
+  chart.update();
+
+  renderCases(from, to, daysBetween(from,to));
+}
+
+function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function renderCases(from, to, span){
+  const hint=document.getElementById('caseHint');
+  const list=document.getElementById('caseList');
+  if(span>8){
+    hint.textContent='Выберите период до 8 дней (например пресет «7 дней»), чтобы разобрать обращения поштучно с саммари.';
+    list.innerHTML='';
+    return;
+  }
+  const cs=(CASES.cases||[]).filter(c=>c.date>=from && c.date<=to);
+  if(!cs.length){
+    hint.textContent='Саммари за этот период ещё не сгенерированы. Запусти: python3 build_cases.py '+from+' '+to;
+    list.innerHTML='';
+    return;
+  }
+  hint.textContent=cs.length+' обращений · саммари от DeepSeek · кликни кейс, чтобы раскрыть диалог';
+  list.innerHTML=cs.map(c=>{
+    const d=c.start.slice(8,10)+'.'+c.start.slice(5,7)+' '+c.start.slice(11);
+    const badges=`<span class="badge">${esc(c.theme)}</span>`
+      +(c.escalated?'<span class="badge esc">оператор</span>':'')
+      +(c.neg?'<span class="badge neg">негатив</span>':'');
+    const dlg=c.dialogue.map(m=>
+      `<div class="dl"><span class="rt r-${m.role}">${m.role} ${esc(m.name)} · ${m.t}</span><br>${esc(m.text)}</div>`).join('');
+    return `<details class="case">
+      <summary>
+        <span class="ctime">${d}</span>
+        <span class="cclient">${esc(c.client)}</span>
+        ${badges}
+        <span class="csum">${esc(c.summary)}</span>
+      </summary>
+      <div class="cdlg">${dlg}</div>
+    </details>`;
+  }).join('');
+}
+
+function setPreset(el){
+  document.querySelectorAll('.preset').forEach(p=>p.classList.remove('active'));
+  if(el) el.classList.add('active');
+}
+
+function startDashboard(){
+  DMIN = M.period.from; DMAX = M.period.to;
+
+  document.getElementById('devs').innerHTML =
+    '<tr><th>Кашалот</th><th style="text-align:right">Обращ.</th><th>Компания</th><th>Управляющий</th></tr>' +
+    M.top_devices.slice(0,8).map(x=>
+      `<tr><td class="num">№${x.device}</td><td class="cnt">${x.count}</td><td>${x.company||'—'}</td><td class="mut">${x.manager||'—'}</td></tr>`).join('');
+
+  document.getElementById('foot').textContent = 'Обновлено '+M.generated+' · '+M.totals.messages.toLocaleString('ru')+' сообщений · данные '+DMIN+' — '+DMAX;
+
+  chart=new Chart(document.getElementById('auto'),{
+    data:{labels:[],datasets:[
+      {type:'bar',label:'Обращений',data:[],backgroundColor:'rgba(136,135,128,0.25)',yAxisID:'y1',borderRadius:3,order:2},
+      {type:'line',label:'Автономность %',data:[],borderColor:'#1D9E75',backgroundColor:'rgba(29,158,117,0.10)',fill:true,tension:0.35,pointRadius:2,borderWidth:2,yAxisID:'y',order:1,spanGaps:true}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{y:{position:'left',min:0,max:100,ticks:{callback:v=>v+'%'}},
+              y1:{position:'right',grid:{drawOnChartArea:false},ticks:{precision:0}}}}
+  });
+
+  document.querySelectorAll('.preset').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      setPreset(btn);
+      const d=btn.dataset.days;
+      const to=DMAX;
+      const from = d==='all' ? DMIN : addDaysIso(to, -(parseInt(d)-1));
+      document.getElementById('from').value=from<DMIN?DMIN:from;
+      document.getElementById('to').value=to;
+      render(document.getElementById('from').value, to);
+    });
+  });
+  ['from','to'].forEach(id=>document.getElementById(id).addEventListener('change',()=>{
+    setPreset(null);
+    let f=document.getElementById('from').value||DMIN, t=document.getElementById('to').value||DMAX;
+    if(f>t){const x=f;f=t;t=x;}
+    render(f,t);
+  }));
+  document.getElementById('from').min=DMIN; document.getElementById('from').max=DMAX;
+  document.getElementById('to').min=DMIN; document.getElementById('to').max=DMAX;
+
+  document.querySelector('.preset[data-days="all"]').click();
+}
+
+
+const API = 'https://kashalot-proxy.vegano-argentino-ru.workers.dev';
+function showGate(html){ document.querySelector('.wrap').innerHTML =
+  '<div style="max-width:420px;margin:80px auto;text-align:center;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:36px 28px">'+html+'</div>'; }
+function loginBtn(){ return '<a href="'+API+'/auth/google?app=support" style="display:inline-block;margin-top:18px;padding:10px 22px;background:#1c1d1f;color:#fff;border-radius:8px;text-decoration:none;font-size:14px">Войти через Google</a>'; }
+(async function boot(){
+  const u = new URL(location.href);
+  const urlTok = u.searchParams.get('token');
+  if(urlTok){ localStorage.setItem('support_token', urlTok); history.replaceState({},'',location.pathname); }
+  const err = u.searchParams.get('error');
+  if(err==='no_access'){ showGate('<div style="font-size:18px;font-weight:500;margin-bottom:8px">Нет доступа</div><div style="color:var(--mut);font-size:14px">Этому аккаунту не выдан доступ к дашборду поддержки. Обратитесь к администратору.</div>'+loginBtn()); return; }
+  const token = localStorage.getItem('support_token');
+  if(!token){ showGate('<div style="font-size:20px;font-weight:500;margin-bottom:6px">Поддержка Кашалот</div><div style="color:var(--mut);font-size:14px">Закрытый дашборд. Войдите рабочим Google-аккаунтом.</div>'+loginBtn()); return; }
+  showGate('<div style="color:var(--mut);font-size:14px">Загрузка данных…</div>');
+  try{
+    const res = await fetch(API+'/support-data', {method:'POST', headers:{'Content-Type':'application/json','X-Partner-Token':token}});
+    if(res.status===401){ localStorage.removeItem('support_token'); showGate('<div style="font-size:18px;font-weight:500;margin-bottom:8px">Сессия истекла</div>'+loginBtn()); return; }
+    if(res.status===403){ showGate('<div style="font-size:18px;font-weight:500;margin-bottom:8px">Нет доступа</div><div style="color:var(--mut);font-size:14px">Аккаунту не выдан доступ к поддержке.</div>'+loginBtn()); return; }
+    if(!res.ok){ showGate('<div style="font-size:16px">Ошибка загрузки ('+res.status+')</div>'+loginBtn()); return; }
+    const j = await res.json();
+    M = j.data.metrics; CASES = j.data.cases || {cases:[]};
+    startDashboard();
+  }catch(e){ showGate('<div style="font-size:16px">Сеть недоступна</div>'+loginBtn()); }
+})();
+
+</script>
+</body>
+</html>
