@@ -83,7 +83,7 @@
   <div class="two">
     <div class="panel">
       <h3>Топ проблемных Кашалотов</h3>
-      <p class="hint">С привязкой к компании и управляющему · за всё время</p>
+      <p class="hint">С привязкой к компании и управляющему · за выбранный период</p>
       <table class="devtbl" id="devs"></table>
     </div>
     <div class="panel">
@@ -140,9 +140,9 @@ function bucketize(days, from, to){
 function render(from, to){
   const days = inRange(from,to);
   const sum = (k)=>days.reduce((a,d)=>a+d[k],0);
-  const appeals=sum('appeals'), esc=sum('escalated'), neg=sum('neg'), ct=sum('client_total');
-  const autonomy = appeals ? Math.round((1-esc/appeals)*100) : 0;
-  const escShare = appeals ? Math.round(esc/appeals*100) : 0;
+  const appeals=sum('appeals'), escCnt=sum('escalated'), neg=sum('neg'), ct=sum('client_total');
+  const autonomy = appeals ? Math.round((1-escCnt/appeals)*100) : 0;
+  const escShare = appeals ? Math.round(escCnt/appeals*100) : 0;
   const negShare = ct ? Math.round(neg/ct*100) : 0;
 
   document.getElementById('rangeLbl').textContent = from+' — '+to+' · '+daysBetween(from,to)+' дн.';
@@ -150,7 +150,7 @@ function render(from, to){
   const cards=[
     ['Автономность бота', autonomy+'%', 'оператор подключался к '+escShare+'%', 'var(--green)'],
     ['Обращений', appeals.toLocaleString('ru'), 'за период', 'var(--ink)'],
-    ['Подключений оператора', escShare+'%', esc.toLocaleString('ru')+' обращений', 'var(--ink)'],
+    ['Подключений оператора', escShare+'%', escCnt.toLocaleString('ru')+' обращений', 'var(--ink)'],
     ['Доля негатива', negShare+'%', 'медиана ответа ~'+M.totals.operator_median_min+' мин', 'var(--red)'],
   ];
   document.getElementById('cards').innerHTML = cards.map(([l,n,s,c])=>
@@ -173,6 +173,16 @@ function render(from, to){
     `<div class="bar-lbl"><span>${n}</span><span style="color:var(--mut)">${v.toLocaleString('ru')} сообщ.</span></div>
      <div class="bar-bg"><div class="bar-fl" style="width:${Math.round(v/maxO*100)}%;background:${OP_COLORS[i%OP_COLORS.length]}"></div></div>`).join('')
     : '<div style="color:var(--mut);font-size:13px">Нет данных за период</div>';
+
+  const devs=new Map();
+  for(const d of days) for(const [k,v] of Object.entries(d.devices||{})) devs.set(k,(devs.get(k)||0)+v);
+  const dArr=[...devs.entries()].sort((a,b)=>b[1]-a[1]).slice(0,8);
+  const info=M.device_info||{};
+  const header='<tr><th>Кашалот</th><th style="text-align:right">Обращ.</th><th>Компания</th><th>Управляющий</th></tr>';
+  document.getElementById('devs').innerHTML = dArr.length ? header + dArr.map(([num,cnt])=>{
+    const di=info[num]||{};
+    return `<tr><td class="num">№${num}</td><td class="cnt">${cnt}</td><td>${esc(di.company||'—')}</td><td class="mut">${esc(di.manager||'—')}</td></tr>`;
+  }).join('') : header+'<tr><td colspan="4" style="color:var(--mut);padding:8px 6px">Нет данных по устройствам за период</td></tr>';
 
   const bk=bucketize(days, from, to);
   const labels=bk.map(b=>b.label);
@@ -229,11 +239,6 @@ function setPreset(el){
 
 function startDashboard(){
   DMIN = M.period.from; DMAX = M.period.to;
-
-  document.getElementById('devs').innerHTML =
-    '<tr><th>Кашалот</th><th style="text-align:right">Обращ.</th><th>Компания</th><th>Управляющий</th></tr>' +
-    M.top_devices.slice(0,8).map(x=>
-      `<tr><td class="num">№${x.device}</td><td class="cnt">${x.count}</td><td>${x.company||'—'}</td><td class="mut">${x.manager||'—'}</td></tr>`).join('');
 
   document.getElementById('foot').textContent = 'Обновлено '+M.generated+' · '+M.totals.messages.toLocaleString('ru')+' сообщений · данные '+DMIN+' — '+DMAX;
 
