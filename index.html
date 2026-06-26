@@ -281,18 +281,21 @@ function loginBtn(){ return '<a href="'+API+'/auth/google?app=support" style="di
   if(urlTok){ localStorage.setItem('support_token', urlTok); history.replaceState({},'',location.pathname); }
   const err = u.searchParams.get('error');
   if(err==='no_access'){ showGate('<div style="font-size:18px;font-weight:500;margin-bottom:8px">Нет доступа</div><div style="color:var(--mut);font-size:14px">Этому аккаунту не выдан доступ к дашборду поддержки. Обратитесь к администратору.</div>'+loginBtn()); return; }
+  if(err){ if(urlTok===null) history.replaceState({},'',location.pathname); showGate('<div style="font-size:18px;font-weight:500;margin-bottom:8px">Ошибка входа</div><div style="color:var(--mut);font-size:13px;word-break:break-all">'+err+'</div>'+loginBtn()); return; }
   const token = localStorage.getItem('support_token');
   if(!token){ showGate('<div style="font-size:20px;font-weight:500;margin-bottom:6px">Поддержка Кашалот</div><div style="color:var(--mut);font-size:14px">Закрытый дашборд. Войдите рабочим Google-аккаунтом.</div>'+loginBtn()); return; }
   showGate('<div style="color:var(--mut);font-size:14px">Загрузка данных…</div>');
   try{
     const res = await fetch(API+'/support-data', {method:'POST', headers:{'Content-Type':'application/json','X-Partner-Token':token}});
-    if(res.status===401){ localStorage.removeItem('support_token'); showGate('<div style="font-size:18px;font-weight:500;margin-bottom:8px">Сессия истекла</div>'+loginBtn()); return; }
+    if(res.status===401){ localStorage.removeItem('support_token'); showGate('<div style="font-size:18px;font-weight:500;margin-bottom:8px">Сессия истекла</div><div style="color:var(--mut);font-size:13px">Войдите заново.</div>'+loginBtn()); return; }
     if(res.status===403){ showGate('<div style="font-size:18px;font-weight:500;margin-bottom:8px">Нет доступа</div><div style="color:var(--mut);font-size:14px">Аккаунту не выдан доступ к поддержке.</div>'+loginBtn()); return; }
-    if(!res.ok){ showGate('<div style="font-size:16px">Ошибка загрузки ('+res.status+')</div>'+loginBtn()); return; }
+    if(!res.ok){ const t=await res.text().catch(()=>''); showGate('<div style="font-size:16px;font-weight:500;margin-bottom:8px">Ошибка загрузки ('+res.status+')</div><div style="color:var(--mut);font-size:13px;word-break:break-all">'+t.slice(0,200)+'</div>'+loginBtn()); return; }
     const j = await res.json();
+    if(!j.data || !j.data.metrics){ showGate('<div style="font-size:16px">Данные не готовы</div><div style="color:var(--mut);font-size:13px">Запусти upload_data.py</div>'+loginBtn()); return; }
     M = j.data.metrics; CASES = j.data.cases || {cases:[]};
-    startDashboard();
-  }catch(e){ showGate('<div style="font-size:16px">Сеть недоступна</div>'+loginBtn()); }
+    try { startDashboard(); }
+    catch(re){ console.error(re); showGate('<div style="font-size:16px;font-weight:500;margin-bottom:8px">Ошибка отрисовки</div><div style="color:var(--mut);font-size:13px;word-break:break-all">'+(re&&re.message?re.message:re)+'</div>'); }
+  }catch(e){ console.error(e); showGate('<div style="font-size:16px;font-weight:500;margin-bottom:8px">Сеть недоступна</div><div style="color:var(--mut);font-size:13px;word-break:break-all">'+(e&&e.message?e.message:e)+'</div>'+loginBtn()); }
 })();
 
 </script>
