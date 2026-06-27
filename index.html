@@ -372,7 +372,7 @@ function startDashboard(){
 const API = 'https://kashalot-proxy.vegano-argentino-ru.workers.dev';
 function showGate(html){ document.querySelector('.wrap').innerHTML =
   '<div style="max-width:420px;margin:80px auto;text-align:center;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:36px 28px">'+html+'</div>'; }
-function loginBtn(){ return '<a href="'+API+'/auth/google?app=support" style="display:inline-block;margin-top:18px;padding:10px 22px;background:#1c1d1f;color:#fff;border-radius:8px;text-decoration:none;font-size:14px">Войти через Google</a>'; }
+function loginBtn(){ return '<div style="display:flex;flex-direction:column;gap:10px;margin-top:18px"><a href="'+API+'/auth/google?app=support" style="display:inline-flex;align-items:center;gap:10px;padding:10px 22px;background:#1c1d1f;color:#fff;border-radius:8px;text-decoration:none;font-size:14px;justify-content:center"><img src="https://www.google.com/favicon.ico" width="16" height="16"> Войти через Google</a><a href="'+API+'/auth/yandex?app=support" style="display:inline-flex;align-items:center;gap:10px;padding:10px 22px;background:#fc3f1d;color:#fff;border-radius:8px;text-decoration:none;font-size:14px;justify-content:center"><span style="background:#fff;color:#fc3f1d;width:18px;height:18px;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-size:13px">Я</span> Войти через Яндекс ID</a></div>'; }
 (async function boot(){
   const WRAP = document.querySelector('.wrap');
   const SKELETON = WRAP.innerHTML;
@@ -383,7 +383,7 @@ function loginBtn(){ return '<a href="'+API+'/auth/google?app=support" style="di
   if(err==='no_access'){ showGate('<div style="font-size:18px;font-weight:500;margin-bottom:8px">Нет доступа</div><div style="color:var(--mut);font-size:14px">Этому аккаунту не выдан доступ к дашборду поддержки. Обратитесь к администратору.</div>'+loginBtn()); return; }
   if(err){ if(urlTok===null) history.replaceState({},'',location.pathname); showGate('<div style="font-size:18px;font-weight:500;margin-bottom:8px">Ошибка входа</div><div style="color:var(--mut);font-size:13px;word-break:break-all">'+err+'</div>'+loginBtn()); return; }
   const token = localStorage.getItem('support_token');
-  if(!token){ showGate('<div style="font-size:20px;font-weight:500;margin-bottom:6px">Поддержка Кашалот</div><div style="color:var(--mut);font-size:14px">Закрытый дашборд. Войдите рабочим Google-аккаунтом.</div>'+loginBtn()); return; }
+  if(!token){ showGate('<div style="font-size:20px;font-weight:500;margin-bottom:6px">Поддержка Кашалот</div><div style="color:var(--mut);font-size:14px">Закрытый дашборд. Войдите через Google или Яндекс ID.</div>'+loginBtn()); return; }
   showGate('<div style="color:var(--mut);font-size:14px">Загрузка данных…</div>');
   try{
     const res = await fetch(API+'/support-data', {method:'POST', headers:{'Content-Type':'application/json','X-Partner-Token':token}});
