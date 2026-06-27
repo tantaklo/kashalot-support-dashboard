@@ -107,6 +107,22 @@
   </div>
   <div class="row">
     <div class="panel">
+      <h3>Инсайты и рекомендации</h3>
+      <p class="hint">Что менять, чтобы клиенты реже испытывали дискомфорт</p>
+      <div style="font-size:12px;color:var(--mut);margin:4px 0 6px;font-weight:500">⚡ По выбранному периоду <span id="insRange" style="font-weight:400"></span></div>
+      <div id="periodInsights" style="font-size:13px;line-height:1.6"></div>
+      <div style="font-size:12px;color:var(--mut);margin:18px 0 6px;font-weight:500;border-top:1px solid var(--line);padding-top:14px">🎯 Стратегия — архитектура платформы</div>
+      <div style="font-size:13px;line-height:1.65">
+        <div style="margin-bottom:9px"><b>1. Биллинг — только по факту движения.</b> Главная боль: «оплатил, время идёт, а он не едет». Начинать тарификацию не с оплаты, а с первого реального движения (GPS/одометр) — убирает целый класс обращений.</div>
+        <div style="margin-bottom:9px"><b>2. Смягчить геозоны + буфер.</b> Частое «я в зоне, а он говорит что нет». Добавить запас к границам и сглаживание GPS; при спорной зоне не блокировать старт, а предупреждать.</div>
+        <div style="margin-bottom:9px"><b>3. Проактивный автовозврат + уведомление.</b> Автовозврат уже работает (0 отказов). Расширить: при неудачном старте система сама возвращает деньги и пишет клиенту до жалобы.</div>
+        <div style="margin-bottom:9px"><b>4. Авто-флаг проблемных кашалотов.</b> Устройства с низкой выручкой на обращение (дашборд их подсвечивает) автоматически отправлять на ТО/вывод, не дожидаясь ручного разбора.</div>
+        <div><b>5. Структурные теги в боте.</b> Попросить разработчиков добавить в карточку поля (номер кашалота, тип проблемы, исход) — аналитика станет точнее, чем парсинг текста.</div>
+      </div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="panel">
       <h3>Кейсы за период — ручной разбор</h3>
       <p class="hint" id="caseHint"></p>
       <div id="caseList"></div>
@@ -213,6 +229,22 @@ function render(from, to){
   chart.update();
 
   renderCases(from, to, daysBetween(from,to));
+  renderInsights(daysBetween(from,to));
+}
+
+function renderInsights(span){
+  const ins = M.insights || {};
+  const key = span<=7 ? '7' : span<=30 ? '30' : span<=90 ? '90' : 'all';
+  const block = ins[key];
+  const el=document.getElementById('periodInsights');
+  const rEl=document.getElementById('insRange');
+  if(!block || !block.text){ el.innerHTML='<span style="color:var(--mut)">Инсайты по периоду не сгенерированы.</span>'; if(rEl) rEl.textContent=''; return; }
+  if(rEl) rEl.textContent = block.range ? '· '+block.range : '';
+  const lines = block.text.split('\n').map(l=>l.trim()).filter(l=>l);
+  el.innerHTML = lines.map(l=>{
+    const t = l.replace(/^[•\-\*]\s*/,'');
+    return `<div style="margin-bottom:7px;display:flex;gap:8px"><span style="color:var(--green)">•</span><span>${esc(t)}</span></div>`;
+  }).join('');
 }
 
 function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
