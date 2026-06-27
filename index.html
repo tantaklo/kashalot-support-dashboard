@@ -133,6 +133,7 @@
 <script>
 let M = null, CASES = null, DMIN, DMAX, chart;
 let REVIEWED = {}, SHOW_REVIEWED = false, API_BASE = null, AUTH_TOKEN = null, curFrom, curTo;
+let DEVICE_FILTER = null;
 const RU_MON = ['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
 const THEME_COLORS = ['var(--blue)','var(--amber)','var(--red)','var(--purple)','var(--green)','var(--gray)','var(--coral)'];
 const OP_COLORS = ['var(--blue)','var(--purple)','var(--green)','var(--coral)'];
@@ -216,7 +217,12 @@ function render(from, to){
     const ratio=cnt?Math.round(rev/cnt):0;
     let col='var(--mut)';
     if(baseline){ col = ratio < baseline*0.5 ? 'var(--red)' : (ratio < baseline ? 'var(--amber)' : 'var(--green)'); }
-    return `<tr><td class="num"><a href="${link}" target="_blank" rel="noopener" style="color:var(--blue);text-decoration:none">№${num} ↗</a></td><td class="cnt">${cnt}</td><td style="text-align:right;font-weight:500;color:${col}">${ratio.toLocaleString('ru')} ₽</td><td>${esc(di.company||'—')}</td><td class="mut">${esc(di.manager||'—')}</td></tr>`;
+    const sel = DEVICE_FILTER===num ? 'background:var(--bg)' : '';
+    return `<tr class="devrow" style="cursor:pointer;${sel}" onclick="filterByDevice('${num}')" title="показать обращения по этому кашалоту">
+      <td class="num"><a href="${link}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:var(--blue);text-decoration:none">№${num} ↗</a></td>
+      <td class="cnt">${cnt}</td>
+      <td style="text-align:right;font-weight:500;color:${col}">${ratio.toLocaleString('ru')} ₽</td>
+      <td>${esc(di.company||'—')}</td><td class="mut">${esc(di.manager||'—')}</td></tr>`;
   }).join('') : header+'<tr><td colspan="5" style="color:var(--mut);padding:8px 6px">Нет данных по устройствам за период</td></tr>';
 
   const bk=bucketize(days, from, to);
@@ -250,6 +256,12 @@ function renderInsights(span){
 function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 function toggleShowReviewed(e){ if(e) e.preventDefault(); SHOW_REVIEWED=!SHOW_REVIEWED; renderCases(curFrom,curTo,daysBetween(curFrom,curTo)); }
+function filterByDevice(num){
+  DEVICE_FILTER = (DEVICE_FILTER===num) ? null : num;
+  render(curFrom, curTo);
+  if(DEVICE_FILTER){ const el=document.getElementById('caseList').closest('.panel'); if(el) el.scrollIntoView({behavior:'smooth',block:'start'}); }
+}
+function clearDeviceFilter(e){ if(e) e.preventDefault(); DEVICE_FILTER=null; render(curFrom,curTo); }
 function markReviewed(e,key,val){
   e.preventDefault(); e.stopPropagation();
   if(val) REVIEWED[key]={by:'вы',at:new Date().toISOString()}; else delete REVIEWED[key];
@@ -263,7 +275,9 @@ function renderCases(from, to, span){
   const hint=document.getElementById('caseHint');
   const list=document.getElementById('caseList');
   if(span>8){
-    hint.textContent='Выберите период до 8 дней (например пресет «7 дней»), чтобы разобрать обращения поштучно с саммари.';
+    hint.innerHTML = DEVICE_FILTER
+      ? 'Обращения по №'+DEVICE_FILTER+' видны при периоде до 8 дней — нажмите «7 дней». <a href="#" onclick="clearDeviceFilter(event)" style="color:var(--blue)">сбросить</a>'
+      : 'Выберите период до 8 дней (например пресет «7 дней»), чтобы разобрать обращения поштучно с саммари.';
     list.innerHTML='';
     return;
   }
@@ -274,11 +288,17 @@ function renderCases(from, to, span){
     return;
   }
   const reviewedN=all.filter(c=>REVIEWED[c.key]).length;
-  const cs = SHOW_REVIEWED ? all : all.filter(c=>!REVIEWED[c.key]);
-  hint.innerHTML=all.length+' обращений · '+reviewedN+' проверено · '
-    +'<a href="#" onclick="toggleShowReviewed(event)" style="color:var(--blue)">'
-    +(SHOW_REVIEWED?'скрыть проверенные':'показать проверенные')+'</a>';
-  if(!cs.length){ list.innerHTML='<div style="color:var(--mut);font-size:13px;padding:8px 0">Все обращения за период проверены 🎉</div>'; return; }
+  let cs = SHOW_REVIEWED ? all : all.filter(c=>!REVIEWED[c.key]);
+  if(DEVICE_FILTER){
+    cs = cs.filter(c=>c.device===DEVICE_FILTER);
+    hint.innerHTML='Кейсы по кашалоту №'+DEVICE_FILTER+' · '+cs.length+' обращ. · '
+      +'<a href="#" onclick="clearDeviceFilter(event)" style="color:var(--blue)">показать все</a>';
+  } else {
+    hint.innerHTML=all.length+' обращений · '+reviewedN+' проверено · '
+      +'<a href="#" onclick="toggleShowReviewed(event)" style="color:var(--blue)">'
+      +(SHOW_REVIEWED?'скрыть проверенные':'показать проверенные')+'</a>';
+  }
+  if(!cs.length){ list.innerHTML='<div style="color:var(--mut);font-size:13px;padding:8px 0">'+(DEVICE_FILTER?'Нет отдельных кейсов по №'+DEVICE_FILTER+' за период (обращение могло быть без текста клиента).':'Все обращения за период проверены 🎉')+'</div>'; return; }
   list.innerHTML=cs.map(c=>{
     const done=!!REVIEWED[c.key];
     const chk=`<button class="chk ${done?'on':''}" title="отметить проверенным" onclick="markReviewed(event,'${c.key}',${!done})">✓</button>`;
