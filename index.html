@@ -147,6 +147,8 @@ function render(from, to){
   const autonomy = appeals ? Math.round((1-escCnt/appeals)*100) : 0;
   const escShare = appeals ? Math.round(escCnt/appeals*100) : 0;
   const negShare = ct ? Math.round(neg/ct*100) : 0;
+  const revPeriod = days.reduce((a,d)=>a+(d.revenue||0),0);
+  const revPerAppeal = appeals ? Math.round(revPeriod/appeals) : 0;
 
   document.getElementById('rangeLbl').textContent = from+' — '+to+' · '+daysBetween(from,to)+' дн.';
 
@@ -155,6 +157,7 @@ function render(from, to){
     ['Обращений', appeals.toLocaleString('ru'), 'за период', 'var(--ink)'],
     ['Подключений оператора', escShare+'%', escCnt.toLocaleString('ru')+' обращений', 'var(--ink)'],
     ['Доля негатива', negShare+'%', 'медиана ответа ~'+M.totals.operator_median_min+' мин', 'var(--red)'],
+    ['Выручка / обращение', revPerAppeal.toLocaleString('ru')+' ₽', (revPeriod/1e6).toFixed(1)+' млн ₽ за период', 'var(--green)'],
   ];
   document.getElementById('cards').innerHTML = cards.map(([l,n,s,c])=>
     `<div class="metric"><div class="lbl">${l}</div><div class="num" style="color:${c}">${n}</div><div class="sub">${s}</div></div>`).join('');
@@ -184,7 +187,8 @@ function render(from, to){
   const header='<tr><th>Кашалот</th><th style="text-align:right">Обращ.</th><th>Компания</th><th>Управляющий</th></tr>';
   document.getElementById('devs').innerHTML = dArr.length ? header + dArr.map(([num,cnt])=>{
     const di=info[num]||{};
-    return `<tr><td class="num">№${num}</td><td class="cnt">${cnt}</td><td>${esc(di.company||'—')}</td><td class="mut">${esc(di.manager||'—')}</td></tr>`;
+    const link=`https://gw.bumerang.tech/admin/car/${num}`;
+    return `<tr><td class="num"><a href="${link}" target="_blank" rel="noopener" style="color:var(--blue);text-decoration:none">№${num} ↗</a></td><td class="cnt">${cnt}</td><td>${esc(di.company||'—')}</td><td class="mut">${esc(di.manager||'—')}</td></tr>`;
   }).join('') : header+'<tr><td colspan="4" style="color:var(--mut);padding:8px 6px">Нет данных по устройствам за период</td></tr>';
 
   const bk=bucketize(days, from, to);
