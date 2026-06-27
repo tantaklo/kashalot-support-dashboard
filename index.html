@@ -48,6 +48,9 @@
   .badge{font-size:11px;padding:2px 8px;border-radius:6px;background:var(--bg);color:var(--mut)}
   .badge.esc{background:#eaf1fb;color:var(--blue)}
   .badge.neg{background:#fcebeb;color:var(--red)}
+  .badge.ref-yes{background:#e1f5ee;color:#0f6e56}
+  .badge.ref-no{background:#fcebeb;color:#a32d2d}
+  .badge.ref-req{background:#faeeda;color:#854f0b}
   .csum{flex:1 1 100%;font-size:13px;color:var(--ink);margin-top:2px}
   .cdlg{padding:10px 12px;font-size:12px;line-height:1.5}
   .cdlg .dl{margin-bottom:8px;white-space:pre-wrap}
@@ -215,9 +218,13 @@ function renderCases(from, to, span){
   hint.textContent=cs.length+' обращений · саммари от DeepSeek · кликни кейс, чтобы раскрыть диалог';
   list.innerHTML=cs.map(c=>{
     const d=c.start.slice(8,10)+'.'+c.start.slice(5,7)+' '+c.start.slice(11);
+    const refund = c.refund==='refunded' ? '<span class="badge ref-yes">возврат сделан</span>'
+      : c.refund==='denied' ? '<span class="badge ref-no">возврат не сделан</span>'
+      : c.refund==='requested' ? '<span class="badge ref-req">возврат запрошен</span>' : '';
     const badges=`<span class="badge">${esc(c.theme)}</span>`
       +(c.escalated?'<span class="badge esc">оператор</span>':'')
-      +(c.neg?'<span class="badge neg">негатив</span>':'');
+      +(c.neg?'<span class="badge neg">негатив</span>':'')
+      +refund;
     const dlg=c.dialogue.map(m=>
       `<div class="dl"><span class="rt r-${m.role}">${m.role} ${esc(m.name)} · ${m.t}</span><br>${esc(m.text)}</div>`).join('');
     return `<details class="case">
