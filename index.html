@@ -86,7 +86,7 @@
   <div class="two">
     <div class="panel">
       <h3>Топ проблемных Кашалотов</h3>
-      <p class="hint">С привязкой к компании и управляющему · за выбранный период</p>
+      <p class="hint">₽/обращ. за период: <span style="color:var(--red)">красный</span> = мало выручки на обращение (проблема), <span style="color:var(--green)">зелёный</span> = норма</p>
       <table class="devtbl" id="devs"></table>
     </div>
     <div class="panel">
@@ -157,7 +157,6 @@ function render(from, to){
     ['Обращений', appeals.toLocaleString('ru'), 'за период', 'var(--ink)'],
     ['Подключений оператора', escShare+'%', escCnt.toLocaleString('ru')+' обращений', 'var(--ink)'],
     ['Доля негатива', negShare+'%', 'медиана ответа ~'+M.totals.operator_median_min+' мин', 'var(--red)'],
-    ['Выручка / обращение', revPerAppeal.toLocaleString('ru')+' ₽', (revPeriod/1e6).toFixed(1)+' млн ₽ за период', 'var(--green)'],
   ];
   document.getElementById('cards').innerHTML = cards.map(([l,n,s,c])=>
     `<div class="metric"><div class="lbl">${l}</div><div class="num" style="color:${c}">${n}</div><div class="sub">${s}</div></div>`).join('');
@@ -180,16 +179,24 @@ function render(from, to){
      <div class="bar-bg"><div class="bar-fl" style="width:${Math.round(v/maxO*100)}%;background:${OP_COLORS[i%OP_COLORS.length]}"></div></div>`).join('')
     : '<div style="color:var(--mut);font-size:13px">Нет данных за период</div>';
 
-  const devs=new Map();
-  for(const d of days) for(const [k,v] of Object.entries(d.devices||{})) devs.set(k,(devs.get(k)||0)+v);
+  const devs=new Map(), devR=new Map();
+  for(const d of days){
+    for(const [k,v] of Object.entries(d.devices||{})) devs.set(k,(devs.get(k)||0)+v);
+    for(const [k,v] of Object.entries(d.dev_rev||{})) devR.set(k,(devR.get(k)||0)+v);
+  }
   const dArr=[...devs.entries()].sort((a,b)=>b[1]-a[1]).slice(0,8);
   const info=M.device_info||{};
-  const header='<tr><th>Кашалот</th><th style="text-align:right">Обращ.</th><th>Компания</th><th>Управляющий</th></tr>';
+  const baseline = appeals ? revPeriod/appeals : 0;  // средняя ₽/обращение за период
+  const header='<tr><th>Кашалот</th><th style="text-align:right">Обращ.</th><th style="text-align:right">₽/обращ.</th><th>Компания</th><th>Управляющий</th></tr>';
   document.getElementById('devs').innerHTML = dArr.length ? header + dArr.map(([num,cnt])=>{
     const di=info[num]||{};
     const link=`https://gw.bumerang.tech/admin/car/${num}`;
-    return `<tr><td class="num"><a href="${link}" target="_blank" rel="noopener" style="color:var(--blue);text-decoration:none">№${num} ↗</a></td><td class="cnt">${cnt}</td><td>${esc(di.company||'—')}</td><td class="mut">${esc(di.manager||'—')}</td></tr>`;
-  }).join('') : header+'<tr><td colspan="4" style="color:var(--mut);padding:8px 6px">Нет данных по устройствам за период</td></tr>';
+    const rev=devR.get(num)||0;
+    const ratio=cnt?Math.round(rev/cnt):0;
+    let col='var(--mut)';
+    if(baseline){ col = ratio < baseline*0.5 ? 'var(--red)' : (ratio < baseline ? 'var(--amber)' : 'var(--green)'); }
+    return `<tr><td class="num"><a href="${link}" target="_blank" rel="noopener" style="color:var(--blue);text-decoration:none">№${num} ↗</a></td><td class="cnt">${cnt}</td><td style="text-align:right;font-weight:500;color:${col}">${ratio.toLocaleString('ru')} ₽</td><td>${esc(di.company||'—')}</td><td class="mut">${esc(di.manager||'—')}</td></tr>`;
+  }).join('') : header+'<tr><td colspan="5" style="color:var(--mut);padding:8px 6px">Нет данных по устройствам за период</td></tr>';
 
   const bk=bucketize(days, from, to);
   const labels=bk.map(b=>b.label);
